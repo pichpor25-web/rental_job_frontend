@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom"; // <-- Added Link
 import { Building2 } from "lucide-react";
 import { loginUser } from "../../Api/authApi";
+import { extractToken, extractUser, saveSession } from "../../utils/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,27 +25,20 @@ export default function LoginPage() {
         password,
       });
 
-      const token =
-        response?.data?.token ||
-        response?.data?.access_token ||
-        response?.data?.data?.token ||
-        response?.data?.data?.access_token;
+      const token = extractToken(response);
 
-      if (token) {
-        localStorage.setItem("access_token", token);
+      if (!token) {
+        setError("Login succeeded but no access token was returned.");
+        return;
       }
 
-      const user =
-        response?.data?.user ||
-        response?.data?.data?.user ||
-        response?.data?.data ||
-        response?.data;
+      const user = extractUser(response);
+      saveSession(token, user);
 
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-      }
-
-      navigate("/");
+      // Return the user to the page that bounced them here, if any.
+      const from = new URLSearchParams(location.search).get("from");
+      const fallback = user?.role === "tenant" ? "/" : "/admin";
+      navigate(from || fallback, { replace: true });
     } catch (err) {
       const message =
         err?.response?.data?.message ||
@@ -110,12 +105,12 @@ export default function LoginPage() {
             </div>
 
             <div className="flex justify-start">
-              <a
-                href="#forgot"
+              <Link
+                to="/forgot-password"
                 className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition"
               >
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             <button
@@ -127,13 +122,13 @@ export default function LoginPage() {
             </button>
 
             <div className="text-center text-xs font-medium text-slate-500 pt-2">
-              Doesn't have an account?{" "}
-              <a
-                href="#signup"
+              Doesn't have an account? {/* Linked directly to /register */}
+              <Link
+                to="/register"
                 className="font-semibold text-indigo-600 hover:text-indigo-700 transition"
               >
                 Signup
-              </a>
+              </Link>
             </div>
           </form>
 

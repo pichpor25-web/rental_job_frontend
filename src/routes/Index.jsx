@@ -13,12 +13,22 @@ import RentalRequestManagement from "../pages/admin/RentalRequests";
 import ViewRoomPage from "../pages/admin/ViewRooms";
 import ViewPropertyPage from "../pages/admin/ViewProperties";
 import EditPropertyPage from "../pages/admin/EditProperties";
+import ViewRentalRequestPage from "../pages/admin/ViewRentalRequest";
+import RegisterPage from "../pages/auth/Register";
+import ForgotPasswordPage from "../pages/auth/ForgotPassword";
+import VerifyOtpPage from "../pages/auth/VerifyOTP";
+import ResetPasswordPage from "../pages/auth/ResetPassword";
+import RentalManagement from "../pages/admin/Rentals";
 
 function Index() {
   return (
     <Routes>
       <Route path="/" element={<Homepage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/verify-otp" element={<VerifyOtpPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Dashboard />} />
@@ -35,7 +45,11 @@ function Index() {
         <Route path="rooms/view/:id" element={<ViewRoomPage />} />
 
         <Route path="roomimage" element={<RoomImageManagement />} />
+
         <Route path="rentalrequest" element={<RentalRequestManagement />} />
+        <Route path="rentalrequest/:id" element={<ViewRentalRequestPage />} />
+
+        <Route path="rental" element={<RentalManagement />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
