@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import { registerUser } from "../../Api/authApi";
-import { extractToken, extractUser, saveSession } from "../../utils/auth";
+import { extractToken, extractUser } from "../../utils/auth";
+import { useAuth } from "../../context/AuthContext";
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { login, isAuthenticated, isAdmin } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -17,6 +19,12 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(isAdmin ? "/admin" : "/", { replace: true });
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -44,8 +52,9 @@ export default function RegisterPage() {
       const user = extractUser(response);
 
       if (token) {
-        saveSession(token, user);
-        navigate(user?.role === "tenant" ? "/" : "/admin", { replace: true });
+        login(token, user);
+        const userIsAdmin = user?.role && user.role.toLowerCase() === "admin";
+        navigate(userIsAdmin ? "/admin" : "/", { replace: true });
         return;
       }
 

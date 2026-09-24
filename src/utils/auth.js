@@ -13,6 +13,16 @@ export const getUser = () => {
   }
 };
 
+export const isAdminUser = (user) => {
+  const current = user || getUser();
+  return Boolean(current?.role && current.role.toLowerCase() === "admin");
+};
+
+export const isTenantUser = (user) => {
+  const current = user || getUser();
+  return Boolean(current?.role && current.role.toLowerCase() === "tenant");
+};
+
 // Pull the token/user out of a login or register response, whatever
 // shape the API wraps them in.
 export const extractToken = (response) =>
@@ -23,7 +33,9 @@ export const extractToken = (response) =>
   null;
 
 export const extractUser = (response) =>
-  response?.data?.user || response?.data?.data?.user || null;
+  response?.data?.user ||
+  response?.data?.data?.user ||
+  (response?.data?.id ? response.data : null);
 
 export const saveSession = (token, user) => {
   if (token) localStorage.setItem(TOKEN_KEY, token);

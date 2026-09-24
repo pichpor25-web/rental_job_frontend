@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Homepage from "../layouts/Homepage";
 import AdminLayout from "../layouts/AdminLayout";
+import AdminRoute from "./AdminRoute";
 import Dashboard from "../pages/admin/Dashboard";
 import Properties from "../pages/admin/Properties";
 import AddProperties from "../pages/admin/AddProperties";
@@ -23,6 +24,7 @@ import RentalManagement from "../pages/admin/Rentals";
 function Index() {
   return (
     <Routes>
+      {/* Public / User Routes */}
       <Route path="/" element={<Homepage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -30,7 +32,15 @@ function Index() {
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route path="/admin" element={<AdminLayout />}>
+      {/* Admin Protected Routes */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
 
@@ -52,6 +62,7 @@ function Index() {
         <Route path="rental" element={<RentalManagement />} />
       </Route>
 
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

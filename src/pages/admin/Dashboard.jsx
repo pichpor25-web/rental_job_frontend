@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -6,9 +7,13 @@ import {
   ShoppingBag,
   Box,
   RotateCcw,
+  Globe,
 } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [timeframe, setTimeframe] = useState("Weekly");
 
   const orders = [
@@ -67,17 +72,24 @@ const Dashboard = () => {
               </button>
             </div>
 
-            {/* Profile Dropdown */}
-            <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/80 shadow-sm cursor-pointer">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-                alt="Angelina Joli"
-                className="w-7 h-7 rounded-full object-cover"
-              />
+            {/* View Homepage Quick Link */}
+            <button
+              onClick={() => navigate("/")}
+              title="Go to User Homepage"
+              className="hidden sm:flex items-center gap-2 bg-white/80 hover:bg-white text-slate-800 px-3 py-1.5 rounded-xl border border-purple-100 shadow-sm text-xs font-semibold transition cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-indigo-600" />
+              <span>View Website</span>
+            </button>
+
+            {/* Profile */}
+            <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/80 shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                {(user?.name || "Admin").charAt(0).toUpperCase()}
+              </div>
               <span className="text-xs font-semibold text-slate-700">
-                Angelina Joli
+                {user?.name || "Admin"}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
             </div>
           </div>
         </div>

@@ -1,16 +1,26 @@
-import React, { useState } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom"; // <-- Added Link
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import { loginUser } from "../../Api/authApi";
-import { extractToken, extractUser, saveSession } from "../../utils/auth";
+import { extractToken, extractUser } from "../../utils/auth";
+import { useAuth } from "../../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login, isAuthenticated, isAdmin } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // If already authenticated, redirect
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(isAdmin ? "/admin" : "/", { replace: true });
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,12 +43,19 @@ export default function LoginPage() {
       }
 
       const user = extractUser(response);
-      saveSession(token, user);
+      login(token, user);
 
-      // Return the user to the page that bounced them here, if any.
+      // Return the user to the page that bounced them here, if permitted
       const from = new URLSearchParams(location.search).get("from");
-      const fallback = user?.role === "tenant" ? "/" : "/admin";
-      navigate(from || fallback, { replace: true });
+      const userIsAdmin = user?.role && user.role.toLowerCase() === "admin";
+
+      if (userIsAdmin) {
+        navigate(from || "/admin", { replace: true });
+      } else {
+        // Regular user cannot go to admin routes
+        const safeDestination = from && !from.startsWith("/admin") ? from : "/";
+        navigate(safeDestination, { replace: true });
+      }
     } catch (err) {
       const message =
         err?.response?.data?.message ||
@@ -122,10 +139,10 @@ export default function LoginPage() {
             </button>
 
             <div className="text-center text-xs font-medium text-slate-500 pt-2">
-              Doesn't have an account? {/* Linked directly to /register */}
+              Doesn't have an account?
               <Link
                 to="/register"
-                className="font-semibold text-indigo-600 hover:text-indigo-700 transition"
+                className="font-semibold text-indigo-600 hover:text-indigo-700 transition ml-1"
               >
                 Signup
               </Link>
