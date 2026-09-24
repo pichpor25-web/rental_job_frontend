@@ -23,6 +23,35 @@ export const isTenantUser = (user) => {
   return Boolean(current?.role && current.role.toLowerCase() === "tenant");
 };
 
+/**
+ * Helper to get the full image URL for avatar regardless of whether
+ * it is stored as relative path or absolute URL.
+ */
+export const getAvatarUrl = (userOrAvatar) => {
+  if (!userOrAvatar) return null;
+  const avatar =
+    typeof userOrAvatar === "object"
+      ? userOrAvatar.avatar_url || userOrAvatar.avatar
+      : userOrAvatar;
+
+  if (!avatar) return null;
+  if (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("data:") ||
+    avatar.startsWith("blob:")
+  ) {
+    return avatar;
+  }
+  const apiBase =
+    import.meta.env.VITE_API_BASE_URL ||
+    import.meta.env.VITE_API_URL ||
+    "http://127.0.0.1:8000/api";
+  const backendBase = apiBase.replace(/\/api\/?$/, "");
+  const cleanPath = avatar.startsWith("storage/") ? avatar : `storage/${avatar}`;
+  return `${backendBase}/${cleanPath.replace(/^\/+/, "")}`;
+};
+
 // Pull the token/user out of a login or register response, whatever
 // shape the API wraps them in.
 export const extractToken = (response) =>

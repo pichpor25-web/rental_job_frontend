@@ -10,11 +10,14 @@ import {
   Globe,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getAvatarUrl } from "../../utils/auth";
+import ProfileModal from "../../components/common/ProfileModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [timeframe, setTimeframe] = useState("Weekly");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const orders = [
     {
@@ -83,10 +86,22 @@ const Dashboard = () => {
             </button>
 
             {/* Profile */}
-            <div className="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/80 shadow-sm">
-              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                {(user?.name || "Admin").charAt(0).toUpperCase()}
-              </div>
+            <div
+              onClick={() => setProfileModalOpen(true)}
+              title="Click to view/edit profile"
+              className="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/80 shadow-sm cursor-pointer hover:bg-white transition"
+            >
+              {user?.avatar || user?.avatar_url ? (
+                <img
+                  src={getAvatarUrl(user)}
+                  alt={user?.name || "Admin"}
+                  className="w-7 h-7 rounded-full object-cover shadow-sm border border-indigo-200"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                  {(user?.name || "Admin").charAt(0).toUpperCase()}
+                </div>
+              )}
               <span className="text-xs font-semibold text-slate-700">
                 {user?.name || "Admin"}
               </span>
@@ -457,6 +472,10 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+      <ProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
     </div>
   );
 };

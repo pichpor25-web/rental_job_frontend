@@ -3,6 +3,7 @@ import Homepage from "../layouts/Homepage";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminRoute from "./AdminRoute";
 import Dashboard from "../pages/admin/Dashboard";
+import UsersManagement from "../pages/admin/Users";
 import Properties from "../pages/admin/Properties";
 import AddProperties from "../pages/admin/AddProperties";
 import LoginPage from "../pages/auth/Login";
@@ -24,7 +25,6 @@ import RentalManagement from "../pages/admin/Rentals";
 function Index() {
   return (
     <Routes>
-      {/* Public / User Routes */}
       <Route path="/" element={<Homepage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -32,7 +32,6 @@ function Index() {
       <Route path="/verify-otp" element={<VerifyOtpPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Admin Protected Routes */}
       <Route
         path="/admin"
         element={
@@ -43,6 +42,7 @@ function Index() {
       >
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="users" element={<UsersManagement />} />
 
         <Route path="properties" element={<Properties />} />
         <Route path="properties/add" element={<AddProperties />} />
@@ -62,7 +62,6 @@ function Index() {
         <Route path="rental" element={<RentalManagement />} />
       </Route>
 
-      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
