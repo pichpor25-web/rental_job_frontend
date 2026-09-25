@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Homepage from "../layouts/Homepage";
+import Propertypage from "../layouts/Propertypage";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminRoute from "./AdminRoute";
 import Dashboard from "../pages/admin/Dashboard";
@@ -26,6 +27,8 @@ function Index() {
   return (
     <Routes>
       <Route path="/" element={<Homepage />} />
+      <Route path="/properties" element={<Propertypage />} />
+      <Route path="/propertycard" element={<Propertypage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

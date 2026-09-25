@@ -41,7 +41,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "Properties", href: "#properties" },
+    { name: "Properties", href: "/properties" },
     { name: "About", href: "#about" },
     { name: "Services", href: "#services" },
     { name: "Contact", href: "#contact" },
@@ -95,7 +95,7 @@ const Navbar = () => {
                   key={link.name}
                   href={link.href}
                   onClick={(e) => {
-                    if (link.href === "/") {
+                    if (link.href.startsWith("/")) {
                       e.preventDefault();
                       navigate("/");
                     }
@@ -299,7 +299,7 @@ const Navbar = () => {
                 key={link.name}
                 href={link.href}
                 onClick={(e) => {
-                  if (link.href === "/") {
+                  if (link.href.startsWith("/")) {
                     e.preventDefault();
                     navigate("/");
                   }
