@@ -24,12 +24,7 @@ import {
   updateProperty,
   deleteProperty,
 } from "../../Api/propertyApi";
-
-const OWNERS = [
-  { id: "101", name: "Sarah Johnson" },
-  { id: "102", name: "Michael Chen" },
-  { id: "103", name: "Emily Davis" },
-];
+import { fetchUsers } from "../../Api/userApi";
 
 const AVATAR_COLORS = [
   "bg-indigo-100 text-indigo-700",
@@ -136,7 +131,7 @@ function FieldLabel({ children }) {
   );
 }
 
-function PropertyForm({ formData, onChange, readOnly, errors }) {
+function PropertyForm({ formData, onChange, readOnly, errors, owners = [] }) {
   const inputClass = (field) =>
     `w-full px-3.5 py-2.5 border rounded-xl text-sm transition focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
       errors?.[field] ? "border-red-300" : "border-slate-200"
@@ -173,7 +168,7 @@ function PropertyForm({ formData, onChange, readOnly, errors }) {
             className={inputClass("owner_id")}
           >
             <option value="">Select owner</option>
-            {OWNERS.map((o) => (
+            {owners.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.name}
               </option>
@@ -244,6 +239,7 @@ export default function PropertyManagement() {
   const navigate = useNavigate();
 
   const [properties, setProperties] = useState([]);
+  const [owners, setOwners] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOwner, setSelectedOwner] = useState("ALL");
@@ -262,11 +258,22 @@ export default function PropertyManagement() {
     const loadProperties = async () => {
       try {
         setLoading(true);
-        const response = await fetchProperties();
-        const rows = Array.isArray(response?.data)
-          ? response.data
-          : (response?.data?.data ?? []);
-        setProperties(rows.map(normalizeProperty));
+        const [propsRes, usersRes] = await Promise.allSettled([
+          fetchProperties(),
+          fetchUsers(),
+        ]);
+        if (propsRes.status === "fulfilled") {
+          const rows = Array.isArray(propsRes.value?.data)
+            ? propsRes.value.data
+            : (propsRes.value?.data?.data ?? []);
+          setProperties(rows.map(normalizeProperty));
+        }
+        if (usersRes.status === "fulfilled") {
+          const uList = Array.isArray(usersRes.value?.data)
+            ? usersRes.value.data
+            : (usersRes.value?.data?.data ?? []);
+          setOwners(uList.map((u) => ({ id: u.id, name: u.name || u.email })));
+        }
       } catch (error) {
         console.error("Failed to fetch properties:", error);
         setProperties([]);
@@ -533,7 +540,7 @@ export default function PropertyManagement() {
               className="px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
             >
               <option value="ALL">All Owners</option>
-              {OWNERS.map((o) => (
+              {owners.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
                 </option>
