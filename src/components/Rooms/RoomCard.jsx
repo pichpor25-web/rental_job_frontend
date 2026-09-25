@@ -5,10 +5,15 @@ import {
   Bath,
   Maximize2,
   Check,
-  ChevronRight
+  ChevronRight,
+  Home
 } from 'lucide-react';
+import { resolveImageUrl } from '../../utils/imageHelper';
 
 export default function RoomCard({ room, isSelected, onSelect }) {
+  const rawImg = Array.isArray(room.images) && room.images.length > 0 ? room.images[0] : null;
+  const imageSrc = resolveImageUrl(rawImg);
+
   return (
     <div
       onClick={() => onSelect(room.id)}
@@ -28,12 +33,22 @@ export default function RoomCard({ room, isSelected, onSelect }) {
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
         {/* Room Preview Image */}
-        <div className="md:col-span-4 relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 group">
-          <img
-            src={room.images[0]}
-            alt={room.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
+        <div className="md:col-span-4 relative aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 group flex items-center justify-center">
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={room.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center text-stone-400 gap-1.5 p-4 text-center">
+              <Home className="w-8 h-8 text-stone-300 stroke-[1.5]" />
+              <span className="text-[11px] font-medium text-stone-400">No Image</span>
+            </div>
+          )}
           <span className={`absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-0.5 rounded-md shadow-xs ${room.badgeColor}`}>
             {room.badge}
           </span>

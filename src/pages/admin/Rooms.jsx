@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { fetchRooms, updateRoom, deleteRoom } from "../../Api/roomApi";
 import { fetchProperties } from "../../Api/propertyApi";
+import { resolveImageUrl } from "../../utils/imageHelper";
 
 const ROOM_STATUSES = [
   {
@@ -527,9 +528,7 @@ export default function RoomManagement() {
                   ))
                 ) : filteredRooms.length > 0 ? (
                   filteredRooms.map((room) => {
-                    const primaryImage =
-                      room.images?.[0]?.full_url ||
-                      room.images?.[0]?.image_path;
+                    const primaryImage = resolveImageUrl(room.images?.[0]);
 
                     return (
                       <tr

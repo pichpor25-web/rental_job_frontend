@@ -30,14 +30,7 @@ import BakongPaymentModal from "../components/payment/BakongPaymentModal";
 import { bookRoomStay } from "../Api/paymentApi";
 import { fetchProperty } from "../Api/propertyApi";
 import Navbar from "../components/common/Navbar";
-
-const resolveImageUrl = (img) => {
-  if (!img) return null;
-  const path = typeof img === "string" ? img : (img.full_url || img.image_path || img.url || "");
-  if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `http://127.0.0.1:8000/storage/${path.replace(/^\/?(storage\/)?/, "")}`;
-};
+import { resolveImageUrl } from "../utils/imageHelper";
 
 export default function PropertyDetailsPage() {
   const { id } = useParams();
@@ -73,29 +66,31 @@ export default function PropertyDetailsPage() {
           setPropertyData(res.data);
           if (Array.isArray(res.data.rooms) && res.data.rooms.length > 0) {
             const formatted = res.data.rooms.map((rm) => {
-              const imgs = (rm.images || []).map(resolveImageUrl).filter(Boolean);
-              const perks = Array.isArray(rm.perks)
-                ? rm.perks
-                : (typeof rm.perks === "string" ? JSON.parse(rm.perks || "[]") : []);
+              const rawImages = Array.isArray(rm.images) ? rm.images : [];
+              const roomImgs = rawImages.map(resolveImageUrl).filter(Boolean);
 
               return {
                 id: rm.id,
                 name: rm.name || `Room ${rm.room_number}`,
                 badge: rm.badge || rm.room_type || "Available",
                 badgeColor: rm.badge_color || "bg-[#E5B869] text-[#06241e]",
-                images: imgs,
-                pricePerNight: Number(rm.price) || 0.10,
+                images: roomImgs,
+                pricePerNight: Number(rm.price) || 0.1,
                 sqft: rm.sqft || 35,
                 guests: rm.max_guests || 2,
                 bedType: rm.bed_type || "1 Queen Bed",
-                bathrooms: rm.bathrooms ? `${rm.bathrooms} Bath` : "1 Bath",
-                perks: perks.length > 0 ? perks : ["Air Conditioning", "High-Speed Wi-Fi", "Private Bath"],
+                bathrooms: rm.bathrooms ? `${rm.bathrooms}` : "1 Bath",
+                perks: Array.isArray(rm.perks)
+                  ? rm.perks
+                  : (typeof rm.perks === "string" ? JSON.parse(rm.perks || "[]") : []),
                 availableCount: rm.available_count || 1,
-                description: rm.description || "Comfortable and modern room.",
+                description: rm.description || "",
               };
             });
             setRoomsList(formatted);
-            setSelectedRoomId(formatted[0].id);
+            if (formatted.length > 0) {
+              setSelectedRoomId(formatted[0].id);
+            }
           }
         }
       } catch (err) {
@@ -110,30 +105,34 @@ export default function PropertyDetailsPage() {
     };
   }, [id]);
 
-  // Gallery images compiled from real room photos
+  // Gallery images compiled from real property and room photos
   const activeGallery = useMemo(() => {
     const list = [];
+    const propCover = resolveImageUrl(propertyData?.featured_image || propertyData?.image);
+    if (propCover) {
+      list.push({
+        id: "cover",
+        title: propertyData.title || propertyData.name || "Residence",
+        url: propCover,
+        tag: "Property",
+      });
+    }
+
     if (roomsList.length > 0) {
       roomsList.forEach((rm, rmIdx) => {
-        (rm.images || []).forEach((img, imgIdx) => {
-          list.push({
-            id: `${rmIdx}-${imgIdx}`,
-            title: rm.name,
-            url: img,
-            tag: rm.badge || "Suites",
-          });
+        (rm.images || []).forEach((imgUrl, imgIdx) => {
+          if (imgUrl && !list.some((item) => item.url === imgUrl)) {
+            list.push({
+              id: `${rmIdx}-${imgIdx}`,
+              title: rm.name,
+              url: imgUrl,
+              tag: rm.badge || "Suite",
+            });
+          }
         });
       });
     }
-    const propCover = resolveImageUrl(propertyData?.featured_image || propertyData?.image);
-    if (propCover) {
-      list.unshift({
-        id: "cover",
-        title: propertyData.title || propertyData.name,
-        url: propCover,
-        tag: "Exterior",
-      });
-    }
+
     return list;
   }, [roomsList, propertyData]);
 
@@ -143,8 +142,8 @@ export default function PropertyDetailsPage() {
       roomsList.find((r) => String(r.id) === String(selectedRoomId)) ||
       roomsList[0] || {
         id: 1,
-        name: "Standard Room",
-        pricePerNight: 0.10,
+        name: "Suite Room",
+        pricePerNight: 0.1,
       }
     );
   }, [roomsList, selectedRoomId]);
@@ -157,11 +156,11 @@ export default function PropertyDetailsPage() {
     return diff > 0 ? diff : 1;
   }, [checkInDate, checkOutDate]);
 
-  // Test payment rate: exact $0.01 total
-  const basePrice = 0.01;
+  const currentRate = Number(selectedRoom?.pricePerNight) || 0.1;
+  const basePrice = Number((currentRate * nightsCount).toFixed(2));
   const serviceFee = 0;
   const cleaningFee = 0;
-  const totalPrice = 0.01;
+  const totalPrice = basePrice;
 
   if (loading) {
     return (
@@ -229,7 +228,7 @@ export default function PropertyDetailsPage() {
             </span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="text-2xl sm:text-3xl font-extrabold text-[#06241e] tracking-tight">
-                $0.01
+                ${currentRate.toFixed(2)}
               </span>
               <span className="text-xs text-stone-500 font-medium">/ night</span>
             </div>
@@ -237,13 +236,16 @@ export default function PropertyDetailsPage() {
         </div>
 
         {/* 3. HERO GALLERY */}
-        {activeGallery.length > 0 && (
+        {activeGallery.length > 0 ? (
           <div className="space-y-4">
             <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-3xl overflow-hidden shadow-2xl bg-stone-900 border border-stone-200">
               <img
                 src={activeGallery[activePhotoIdx]?.url || activeGallery[0]?.url}
                 alt={activeGallery[activePhotoIdx]?.title}
                 className="w-full h-full object-cover transition-all duration-700 ease-out"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
@@ -314,11 +316,23 @@ export default function PropertyDetailsPage() {
                         : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
-                    <img src={item.url} alt={item.title} className="w-full h-full object-cover" />
+                    <img
+                      src={item.url}
+                      alt={item.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
                   </button>
                 ))}
               </div>
             )}
+          </div>
+        ) : (
+          <div className="w-full aspect-[16/9] md:aspect-[21/9] rounded-3xl bg-stone-100 border border-stone-200 flex flex-col items-center justify-center text-stone-400 gap-2">
+            <Home className="w-12 h-12 stroke-[1.5]" />
+            <p className="text-sm font-semibold">No residence photos uploaded yet</p>
           </div>
         )}
 
@@ -448,9 +462,9 @@ export default function PropertyDetailsPage() {
                 </div>
                 <div className="text-right">
                   <span className="text-xl font-black text-[#06241e] font-mono">
-                    $0.01
+                    ${currentRate.toFixed(2)}
                   </span>
-                  <span className="text-[10px] text-stone-400 block">/ night test</span>
+                  <span className="text-[10px] text-stone-400 block">/ night</span>
                 </div>
               </div>
 
@@ -513,27 +527,27 @@ export default function PropertyDetailsPage() {
               {/* PRICE BREAKDOWN */}
               <div className="space-y-2.5 pt-2 text-xs text-stone-600">
                 <div className="flex justify-between">
-                  <span>Test Stay Rate ({nightsCount} nights)</span>
-                  <span className="font-semibold text-slate-800">$0.01</span>
+                  <span>Stay Rate ({nightsCount} {nightsCount === 1 ? "night" : "nights"})</span>
+                  <span className="font-semibold text-slate-800">${basePrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="flex items-center gap-1">
-                    <span>VIP Concierge & Service (Test Promo)</span>
+                    <span>VIP Concierge & Service</span>
                     <Info className="w-3 h-3 text-stone-400" />
                   </span>
-                  <span className="font-semibold text-emerald-600">$0.00</span>
+                  <span className="font-semibold text-emerald-600">Included</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Departure Deep Sanitation (Test Promo)</span>
-                  <span className="font-semibold text-emerald-600">$0.00</span>
+                  <span>Departure Deep Sanitation</span>
+                  <span className="font-semibold text-emerald-600">Included</span>
                 </div>
 
                 <div className="border-t border-stone-100 pt-3 flex justify-between items-baseline text-slate-900">
                   <div>
                     <span className="text-sm font-bold block">Estimated Total</span>
-                    <span className="text-[10px] text-stone-400">Test payment rate for Bakong KHQR</span>
+                    <span className="text-[10px] text-stone-400">Instant Bakong KHQR checkout</span>
                   </div>
-                  <span className="text-2xl font-extrabold text-[#06241e]">$0.01</span>
+                  <span className="text-2xl font-extrabold text-[#06241e]">${totalPrice.toFixed(2)}</span>
                 </div>
               </div>
 

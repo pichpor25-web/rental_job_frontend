@@ -13,13 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-const resolveImageUrl = (img) => {
-  if (!img) return null;
-  const path = typeof img === "string" ? img : (img.full_url || img.image_path || img.url || "");
-  if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `http://127.0.0.1:8000/storage/${path.replace(/^\/?(storage\/)?/, "")}`;
-};
+import { resolveImageUrl } from "../../utils/imageHelper";
 
 export default function AllPropertiesPage({
   properties = [],
@@ -46,9 +40,9 @@ export default function AllPropertiesPage({
           const mapped = res.data.map((p) => {
             const primaryRoom = p.rooms?.[0];
             const rawImg =
+              p.featured_image ||
               primaryRoom?.images?.[0]?.full_url ||
               primaryRoom?.images?.[0]?.image_path ||
-              p.featured_image ||
               p.image ||
               null;
             const primaryImage = resolveImageUrl(rawImg);

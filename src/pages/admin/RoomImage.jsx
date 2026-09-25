@@ -27,6 +27,7 @@ import {
   updateRoomImage,
   deleteRoomImage,
 } from "../../Api/roomImageApi";
+import { resolveImageUrl } from "../../utils/imageHelper";
 
 function Toast({ toast, onClose }) {
   if (!toast) return null;
@@ -69,7 +70,7 @@ function formatFileSize(bytes) {
 function ViewModal({ isOpen, onClose, image, onOpenEdit }) {
   if (!isOpen || !image) return null;
 
-  const currentUrl = image.full_url || image.image_path;
+  const currentUrl = resolveImageUrl(image);
   const roomNumber = image.room_number || image.room?.room_number || image.room_id;
   const propertyName = image.property_name || image.room?.property?.name || "N/A";
 
@@ -170,7 +171,7 @@ function EditModal({ isOpen, onClose, onUpdate, image, updating }) {
 
   if (!isOpen || !image) return null;
 
-  const currentUrl = image.full_url || image.image_path;
+  const currentUrl = resolveImageUrl(image);
   const roomNumber = image.room_number || image.room?.room_number || image.room_id;
 
   const handleSubmit = async (e) => {
@@ -916,7 +917,7 @@ export default function RoomImageManagement() {
                       img.room_number || img.room?.room_number || img.room_id;
                     const propertyName =
                       img.property_name || img.room?.property?.name || "N/A";
-                    const fullUrl = img.full_url || img.image_path;
+                    const fullUrl = resolveImageUrl(img);
 
                     return (
                       <tr
