@@ -18,7 +18,8 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
   const navigate = useNavigate();
   const [activeImgIdx, setActiveImgIdx] = useState(0);
 
-  const images = Array.isArray(room.images) && room.images.length > 0 ? room.images : [];
+  const images =
+    Array.isArray(room.images) && room.images.length > 0 ? room.images : [];
   const isAvailable = room.status ? room.status === "available" : true;
 
   const handlePrevImg = (e) => {
@@ -32,19 +33,21 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
   };
 
   const handleCardClick = () => {
+    if (room?.id) {
+      navigate(`/rooms/${room.id}`);
+    }
     if (onSelect) {
       onSelect(room);
-    } else if (room?.id) {
-      navigate(`/rooms/${room.id}`);
     }
   };
 
   const handleViewDetails = (e) => {
     e.stopPropagation();
+    if (room?.id) {
+      navigate(`/rooms/${room.id}`);
+    }
     if (onSelect) {
       onSelect(room);
-    } else if (room?.id) {
-      navigate(`/rooms/${room.id}`);
     }
   };
 
@@ -152,7 +155,8 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
                 {room.name}
               </h3>
               <p className="text-xs text-stone-400 capitalize mt-0.5">
-                {room.bed_type || room.bedType || "1 King Bed"} • {room.bathrooms || "1 Bath"}
+                {room.bed_type || room.bedType || "1 King Bed"} •{" "}
+                {room.bathrooms || "1 Bath"}
               </p>
             </div>
 
@@ -175,7 +179,9 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
           <div className="grid grid-cols-3 gap-2 py-3 border-y border-stone-100 text-[11px] text-stone-600 font-medium">
             <div className="flex items-center gap-1.5 truncate">
               <Users className="w-3.5 h-3.5 text-[#B78A52] shrink-0" />
-              <span className="truncate">Max {room.max_guests || room.guests || 2}</span>
+              <span className="truncate">
+                Max {room.max_guests || room.guests || 2}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 truncate">
               <Bath className="w-3.5 h-3.5 text-[#B78A52] shrink-0" />
@@ -213,7 +219,10 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
       <div className="px-5 pb-5 sm:px-6 sm:pb-6 pt-2 grid grid-cols-2 gap-2 border-t border-stone-100 bg-stone-50/40">
         <button
           type="button"
-          onClick={handleViewDetails}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/rooms/${room.id}`);
+          }}
           className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-stone-100 border border-stone-200 text-slate-800 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
         >
           <Eye className="w-3.5 h-3.5 text-stone-500" />
@@ -227,10 +236,10 @@ export default function RoomCard({ room, onSelect, onBookDirect }) {
             e.stopPropagation();
             if (onBookDirect) {
               onBookDirect(room.id);
-            } else if (onSelect) {
-              onSelect(room);
             } else if (room?.id) {
               navigate(`/rooms/${room.id}`);
+            } else if (onSelect) {
+              onSelect(room);
             }
           }}
           className="w-full py-2.5 px-3 rounded-xl bg-[#06241e] hover:bg-[#0c3a30] text-[#E5B869] text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"

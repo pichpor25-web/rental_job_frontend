@@ -44,6 +44,7 @@ export default function RoomDetailPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [bookingRentalId, setBookingRentalId] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
+  const [bookingError, setBookingError] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function RoomDetailPage() {
               raw.property?.location ||
               "Phnom Penh, Cambodia",
             badge: raw.badge || raw.room_type || "Available",
-            pricePerNight: Number(raw.price) || 0.1,
+            pricePerNight: Number(raw.price) || 0,
             sqft: raw.sqft || 35,
             guests: raw.max_guests || 2,
             bedType: raw.bed_type || "1 Queen Bed",
@@ -114,8 +115,8 @@ export default function RoomDetailPage() {
             perks: Array.isArray(raw.perks)
               ? raw.perks
               : typeof raw.perks === "string"
-              ? JSON.parse(raw.perks || "[]")
-              : [],
+                ? JSON.parse(raw.perks || "[]")
+                : [],
           });
         }
       } catch (err) {
@@ -142,12 +143,13 @@ export default function RoomDetailPage() {
   // Service Fee = Base Price * 0.08 (8%)
   // Cleaning Fee = Flat $50.00
   // Total Amount = Base Price + Service Fee + Cleaning Fee
-  const basePrice = room.pricePerNight * nightsCount;
-  const serviceFee = Math.round(basePrice * 0.08);
-  const cleaningFee = 50;
+  const basePrice = (room?.pricePerNight || 0) * nightsCount;
+  const serviceFee = Math.round(basePrice * 0.08 * 100) / 100;
+  const cleaningFee = 0;
   const totalPrice = basePrice + serviceFee + cleaningFee;
 
   const handleStartReservation = async () => {
+    setBookingError("");
     try {
       setIsBooking(true);
       // Create pending reservation on backend
@@ -158,15 +160,24 @@ export default function RoomDetailPage() {
         total_guests: guestCount,
       });
 
-      if (res.data?.data?.id) {
-        setBookingRentalId(res.data.data.id);
+      const rentalId = res.data?.data?.id;
+      if (!rentalId) {
+        throw new Error("The reservation was not created. Please try again.");
       }
+      setBookingRentalId(rentalId);
       setShowPaymentModal(true);
     } catch (err) {
-      console.warn("Backend booking fallback:", err);
-      // Fallback rental ID for instant modal test
-      setBookingRentalId(1);
-      setShowPaymentModal(true);
+      console.error("Unable to create reservation:", err);
+      const validationErrors = err.response?.data?.errors;
+      const firstValidationError = validationErrors
+        ? Object.values(validationErrors).flat()[0]
+        : null;
+      setBookingError(
+        firstValidationError ||
+          err.response?.data?.message ||
+          err.message ||
+          "Unable to create your reservation. Please try again.",
+      );
     } finally {
       setIsBooking(false);
     }
@@ -180,7 +191,7 @@ export default function RoomDetailPage() {
   const prevPhoto = () => {
     if (!room?.images?.length) return;
     setActivePhotoIdx(
-      (prev) => (prev - 1 + room.images.length) % room.images.length
+      (prev) => (prev - 1 + room.images.length) % room.images.length,
     );
   };
 
@@ -190,7 +201,9 @@ export default function RoomDetailPage() {
         <Navbar />
         <div className="flex flex-col items-center justify-center py-40 gap-3 text-stone-500">
           <Loader2 className="w-10 h-10 animate-spin text-[#06241e]" />
-          <p className="text-sm font-semibold tracking-wide">Loading suite details...</p>
+          <p className="text-sm font-semibold tracking-wide">
+            Loading suite details...
+          </p>
         </div>
         <Footer />
       </div>
@@ -202,8 +215,12 @@ export default function RoomDetailPage() {
       <div className="min-h-screen bg-[#FBFBFA] flex flex-col justify-between">
         <Navbar />
         <div className="max-w-md mx-auto py-32 text-center space-y-4 px-4">
-          <h2 className="text-2xl font-serif font-bold text-slate-900">Room Not Found</h2>
-          <p className="text-xs text-stone-500">The room suite you are looking for does not exist in the database.</p>
+          <h2 className="text-2xl font-serif font-bold text-slate-900">
+            Room Not Found
+          </h2>
+          <p className="text-xs text-stone-500">
+            The room suite you are looking for does not exist in the database.
+          </p>
           <button
             onClick={() => navigate("/properties")}
             className="px-6 py-2.5 rounded-full bg-[#06241e] text-[#E5B869] text-xs font-bold shadow hover:bg-[#0c3a30] transition cursor-pointer"
@@ -495,7 +512,8 @@ export default function RoomDetailPage() {
               <div className="space-y-2.5 pt-2 text-xs text-stone-600 border-t border-stone-100">
                 <div className="flex justify-between">
                   <span>
-                    ${Number(room.pricePerNight).toFixed(2)} × {nightsCount} {nightsCount === 1 ? "night" : "nights"}:
+                    ${Number(room.pricePerNight).toFixed(2)} × {nightsCount}{" "}
+                    {nightsCount === 1 ? "night" : "nights"}:
                   </span>
                   <span className="font-semibold text-slate-900">
                     ${basePrice.toFixed(2)}
@@ -533,6 +551,11 @@ export default function RoomDetailPage() {
               </div>
 
               {/* DIRECT RESERVATION BUTTON */}
+              {bookingError && (
+                <p role="alert" className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                  {bookingError}
+                </p>
+              )}
               <button
                 type="button"
                 onClick={handleStartReservation}
@@ -594,8 +617,9 @@ export default function RoomDetailPage() {
               <p className="text-xs text-stone-500 mt-2 leading-relaxed">
                 Thank you! Your reservation for{" "}
                 <strong className="text-slate-800">{room.name}</strong> from{" "}
-                <strong>{checkInDate}</strong> to <strong>{checkOutDate}</strong>{" "}
-                has been confirmed via Bakong KHQR.
+                <strong>{checkInDate}</strong> to{" "}
+                <strong>{checkOutDate}</strong> has been confirmed via Bakong
+                KHQR.
               </p>
             </div>
 

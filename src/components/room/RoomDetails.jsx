@@ -33,14 +33,10 @@ import {
   Info,
   X,
   CreditCard,
-  Check,
 } from "lucide-react";
-import Navbar from "../common/Navbar";
-import Footer from "../common/Footer";
-import { resolveImageUrl } from "../../utils/imageHelper";
-import { fetchRoom } from "../../Api/roomApi";
-import { bookRoomStay } from "../../Api/paymentApi";
-import KHQRPaymentModal from "../payment/KHQRPaymentModal";
+import Navbar from "../components/common/Navbar";
+import Footer from "../components/common/Footer";
+import { resolveImageUrl } from "../utils/imageHelper";
 
 // Utility icon mapper for room perks
 const getPerkIcon = (perkName = "") => {
@@ -93,10 +89,6 @@ export default function RoomDetailsPage() {
     return today.toISOString().split("T")[0];
   });
   const [guestCount, setGuestCount] = useState(2);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [bookingRentalId, setBookingRentalId] = useState(null);
-  const [isBooking, setIsBooking] = useState(false);
-  const [bookingConfirmed, setBookingConfirmed] = useState(false);
 
   // Fetch Room Data from GET /api/rooms/{id}
   useEffect(() => {
@@ -106,9 +98,9 @@ export default function RoomDetailsPage() {
     const loadRoom = async () => {
       try {
         setLoading(true);
-        const cleanId = String(id).replace(/^room-/, "");
-        const res = await fetchRoom(cleanId);
-        const data = res?.data || res;
+        const res = await fetch(`/api/rooms/${id}`);
+        if (!res.ok) throw new Error("Failed to load room");
+        const data = await res.json();
 
         if (isMounted && data) {
           // Normalize Images
@@ -189,28 +181,19 @@ export default function RoomDetailsPage() {
 
   const isAvailable = room?.status === "available";
 
-  const handleBookNow = async () => {
-    try {
-      setIsBooking(true);
-      const res = await bookRoomStay({
-        room_id: room.id,
-        start_date: checkInDate,
-        end_date: checkOutDate,
-        total_guests: guestCount,
-      });
-      if (res.data?.data?.id) {
-        setBookingRentalId(res.data.data.id);
-      } else {
-        setBookingRentalId(room.id || 1);
-      }
-      setShowPaymentModal(true);
-    } catch (err) {
-      console.warn("Booking fallback:", err);
-      setBookingRentalId(room.id || 1);
-      setShowPaymentModal(true);
-    } finally {
-      setIsBooking(false);
-    }
+  const handleBookNow = () => {
+    navigate(`/checkout?roomId=${room.id}`, {
+      state: {
+        room,
+        checkInDate,
+        checkOutDate,
+        guestCount,
+        nightsCount,
+        stayTotal,
+        deposit: room.deposit,
+        grandTotal,
+      },
+    });
   };
 
   if (loading) {
@@ -848,60 +831,6 @@ export default function RoomDetailsPage() {
                 />
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* BAKONG KHQR PAYMENT MODAL */}
-      <KHQRPaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        rentalId={bookingRentalId}
-        amount={grandTotal}
-        calculation={{
-          nights: nightsCount,
-          nightly_rate: room.price,
-          base_price: stayTotal,
-          deposit: room.deposit,
-          total_amount: grandTotal,
-        }}
-        propertyName={room.property_title || "Luxury Residence"}
-        roomName={room.name}
-        onPaymentSuccess={(confirmed) => {
-          setShowPaymentModal(false);
-          setBookingConfirmed(true);
-        }}
-      />
-
-      {/* CONFIRMATION SUCCESS DIALOG */}
-      {bookingConfirmed && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 shadow-2xl border border-stone-200">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-400/30">
-              <Check className="w-8 h-8 stroke-[2.5]" />
-            </div>
-
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#E5B869]">
-                Booking Confirmed
-              </span>
-              <h3 className="text-2xl font-serif font-bold text-slate-900 mt-1">
-                Your Luxury Stay is Secured
-              </h3>
-              <p className="text-xs text-stone-500 mt-2 leading-relaxed">
-                Thank you! Your reservation for{" "}
-                <strong className="text-slate-800">{room.name}</strong> from{" "}
-                <strong>{checkInDate}</strong> to <strong>{checkOutDate}</strong>{" "}
-                has been confirmed via Bakong KHQR.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setBookingConfirmed(false)}
-              className="w-full py-3.5 rounded-full bg-[#06241e] text-[#E5B869] font-bold text-xs tracking-wider transition hover:bg-[#0d3b32] cursor-pointer"
-            >
-              Done
-            </button>
           </div>
         </div>
       )}

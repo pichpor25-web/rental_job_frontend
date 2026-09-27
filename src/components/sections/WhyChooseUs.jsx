@@ -1,5 +1,6 @@
 import React from "react";
 
+// Review Test: Verify Accept and Reject buttons with AutoSave disabled
 export default function WhyChooseUs() {
   return (
     <section className="w-full mt-18 relative overflow-hidden min-h-[480px] md:min-h-[520px] flex items-center bg-[#06241e]">

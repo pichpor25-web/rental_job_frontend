@@ -136,7 +136,9 @@ const Navbar = () => {
                   <div className="relative" ref={dropdownRef}>
                     <button
                       type="button"
-                      onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                      onClick={() =>
+                        setProfileDropdownOpen(!profileDropdownOpen)
+                      }
                       aria-label="User profile"
                       className="flex items-center gap-2.5 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-slate-100 transition-all duration-200 hover:border-[#dcae4d] hover:bg-white/10 cursor-pointer"
                     >

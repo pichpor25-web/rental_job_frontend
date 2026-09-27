@@ -14,62 +14,38 @@ import {
   X,
   TrendingUp,
   Check,
-  ExternalLink,
   Loader2,
   AlertTriangle,
+  Bed,
+  Bath,
+  Maximize2,
+  Image as ImageIcon,
 } from "lucide-react";
-import {
-  fetchProperties,
-  createProperty,
-  updateProperty,
-  deleteProperty,
-} from "../../Api/propertyApi";
+import { fetchProperties, deleteProperty } from "../../Api/propertyApi";
 import { fetchUsers } from "../../Api/userApi";
-
-const AVATAR_COLORS = [
-  "bg-indigo-100 text-indigo-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-sky-100 text-sky-700",
-  "bg-violet-100 text-violet-700",
-];
-
-const avatarColor = (seed) => {
-  const s = String(seed ?? "");
-  let hash = 0;
-  for (let i = 0; i < s.length; i++)
-    hash = s.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-};
-
-const toNumberOrNull = (value) => {
-  if (value === null || value === undefined || value === "") return null;
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
-};
 
 const normalizeProperty = (property) => ({
   ...property,
+  title: property.title || property.name || "Untitled Property",
+  name: property.name || property.title || "Untitled Property",
+  address: property.address || property.location || "No location provided",
   owner_id: property.owner_id ?? property.owner?.id ?? null,
   owner: property.owner || {
     id: property.owner_id ?? null,
     name: "Unassigned",
     email: "",
   },
-  rooms_count: property.rooms_count ?? property.rooms?.length ?? 0,
-  latitude: toNumberOrNull(property.latitude),
-  longitude: toNumberOrNull(property.longitude),
+  price: property.price ? Number(property.price) : 0,
+  price_display: property.price_display || null,
+  price_suffix: property.price_suffix || "/ mo",
+  beds: property.beds ?? 0,
+  baths: property.baths ?? 0,
+  sqft: property.sqft ?? null,
+  tag: property.tag || null,
+  tag_color:
+    property.tag_color || "bg-indigo-50 text-indigo-700 border-indigo-200",
+  featured_image: property.featured_image || null,
 });
-
-const EMPTY_FORM = {
-  name: "",
-  description: "",
-  address: "",
-  latitude: "",
-  longitude: "",
-  owner_id: "",
-};
 
 function Toast({ toast, onClose }) {
   if (!toast) return null;
@@ -123,118 +99,6 @@ function StatCard({ label, value, icon: Icon, tint, trend }) {
   );
 }
 
-function FieldLabel({ children }) {
-  return (
-    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
-      {children}
-    </label>
-  );
-}
-
-function PropertyForm({ formData, onChange, readOnly, errors, owners = [] }) {
-  const inputClass = (field) =>
-    `w-full px-3.5 py-2.5 border rounded-xl text-sm transition focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed ${
-      errors?.[field] ? "border-red-300" : "border-slate-200"
-    }`;
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <FieldLabel>Property Name</FieldLabel>
-        <input
-          type="text"
-          name="name"
-          required
-          value={formData.name}
-          onChange={onChange}
-          disabled={readOnly}
-          placeholder="e.g. Grand Horizon Heights"
-          className={inputClass("name")}
-        />
-        {errors?.name && (
-          <p className="text-xs text-red-600 mt-1">{errors.name}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <FieldLabel>Owner</FieldLabel>
-          <select
-            name="owner_id"
-            required
-            value={formData.owner_id}
-            onChange={onChange}
-            disabled={readOnly}
-            className={inputClass("owner_id")}
-          >
-            <option value="">Select owner</option>
-            {owners.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <FieldLabel>Address</FieldLabel>
-          <input
-            type="text"
-            name="address"
-            required
-            value={formData.address}
-            onChange={onChange}
-            disabled={readOnly}
-            placeholder="Full street address"
-            className={inputClass("address")}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <FieldLabel>Latitude</FieldLabel>
-          <input
-            type="number"
-            step="any"
-            name="latitude"
-            value={formData.latitude}
-            onChange={onChange}
-            disabled={readOnly}
-            placeholder="37.7749"
-            className={inputClass("latitude")}
-          />
-        </div>
-        <div>
-          <FieldLabel>Longitude</FieldLabel>
-          <input
-            type="number"
-            step="any"
-            name="longitude"
-            value={formData.longitude}
-            onChange={onChange}
-            disabled={readOnly}
-            placeholder="-122.4194"
-            className={inputClass("longitude")}
-          />
-        </div>
-      </div>
-
-      <div>
-        <FieldLabel>Description</FieldLabel>
-        <textarea
-          name="description"
-          rows="3"
-          value={formData.description}
-          onChange={onChange}
-          disabled={readOnly}
-          placeholder="Brief details about the property..."
-          className={`${inputClass("description")} resize-none`}
-        />
-      </div>
-    </div>
-  );
-}
-
 export default function PropertyManagement() {
   const navigate = useNavigate();
 
@@ -243,16 +107,9 @@ export default function PropertyManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [selectedOwner, setSelectedOwner] = useState("ALL");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [propertyModalOpen, setPropertyModalOpen] = useState(false);
-  const [propertyModalMode, setPropertyModalMode] = useState("view");
-  const [selectedProperty, setSelectedProperty] = useState(null);
   const [activeMenuId, setActiveMenuId] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
-  const [formErrors, setFormErrors] = useState({});
-  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
     const loadProperties = async () => {
@@ -301,166 +158,32 @@ export default function PropertyManagement() {
 
   const showToast = (type, message) => setToast({ type, message });
 
-  // Stats
   const totalProperties = properties.length;
   const uniqueOwners = new Set(
     properties.map((p) => p.owner_id).filter(Boolean),
   ).size;
-  const totalMapped = properties.filter(
-    (p) =>
-      Number.isFinite(Number(p.latitude)) &&
-      Number.isFinite(Number(p.longitude)),
-  ).length;
 
   const filteredProperties = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return properties.filter((p) => {
-      const name = (p.name || "").toLowerCase();
+      const title = (p.title || "").toLowerCase();
       const address = (p.address || "").toLowerCase();
-      const matchesSearch = !q || name.includes(q) || address.includes(q);
+      const matchesSearch = !q || title.includes(q) || address.includes(q);
       const matchesOwner =
         selectedOwner === "ALL" || String(p.owner_id) === selectedOwner;
       return matchesSearch && matchesOwner;
     });
   }, [properties, searchQuery, selectedOwner]);
 
-  const validate = (data) => {
-    const errors = {};
-    if (!data.name.trim()) errors.name = "Property name is required";
-    if (!data.address.trim()) errors.address = "Address is required";
-    if (!data.owner_id) errors.owner_id = "Owner is required";
-    if (data.latitude && Math.abs(Number(data.latitude)) > 90)
-      errors.latitude = "Latitude must be between -90 and 90";
-    if (data.longitude && Math.abs(Number(data.longitude)) > 180)
-      errors.longitude = "Longitude must be between -180 and 180";
-    return errors;
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
-  };
-
-  const handleCreateProperty = async (e) => {
-    e.preventDefault();
-    const errors = validate(formData);
-    if (Object.keys(errors).length) {
-      setFormErrors(errors);
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const payload = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        address: formData.address.trim(),
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        owner_id: Number(formData.owner_id),
-      };
-
-      const response = await createProperty(payload);
-      const createdProperty = normalizeProperty(
-        response?.data?.data ?? response?.data ?? payload,
-      );
-      setProperties((prev) => [createdProperty, ...prev]);
-      setIsModalOpen(false);
-      setFormData(EMPTY_FORM);
-      setFormErrors({});
-      showToast("success", `"${createdProperty.name}" was added.`);
-    } catch (error) {
-      console.error("Failed to create property:", error);
-      showToast(
-        "error",
-        error?.response?.data?.message || "Failed to create property.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openPropertyModal = (mode, property) => {
-    const normalized = normalizeProperty(property);
-    setSelectedProperty(normalized);
-    setPropertyModalMode(mode);
-    setFormErrors({});
-    setFormData({
-      name: normalized.name || "",
-      description: normalized.description || "",
-      address: normalized.address || "",
-      latitude: normalized.latitude ?? "",
-      longitude: normalized.longitude ?? "",
-      owner_id: normalized.owner_id ? String(normalized.owner_id) : "",
-    });
-    setPropertyModalOpen(true);
-    setActiveMenuId(null);
-  };
-
-  const closePropertyModal = () => {
-    setPropertyModalOpen(false);
-    setSelectedProperty(null);
-    setPropertyModalMode("view");
-    setFormErrors({});
-    setFormData(EMPTY_FORM);
-  };
-
-  const handleUpdateProperty = async (e) => {
-    e.preventDefault();
-    if (!selectedProperty) return;
-    const errors = validate(formData);
-    if (Object.keys(errors).length) {
-      setFormErrors(errors);
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const payload = {
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        address: formData.address.trim(),
-        latitude: formData.latitude ? parseFloat(formData.latitude) : null,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-        owner_id: Number(formData.owner_id),
-      };
-
-      const response = await updateProperty(selectedProperty.id, payload);
-      const updatedProperty = normalizeProperty(
-        response?.data?.data ??
-          response?.data ?? { ...selectedProperty, ...payload },
-      );
-
-      setProperties((prev) =>
-        prev.map((property) =>
-          property.id === selectedProperty.id ? updatedProperty : property,
-        ),
-      );
-      showToast("success", `"${updatedProperty.name}" was updated.`);
-      closePropertyModal();
-    } catch (error) {
-      console.error("Failed to update property:", error);
-      showToast(
-        "error",
-        error?.response?.data?.message || "Failed to update property.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const handleDelete = async (property) => {
-    if (!confirm(`Delete "${property.name}"? This can't be undone.`)) return;
+    if (!confirm(`Delete "${property.title}"? This cannot be undone.`)) return;
 
     try {
       setDeletingId(property.id);
       await deleteProperty(property.id);
       setProperties((prev) => prev.filter((p) => p.id !== property.id));
       setActiveMenuId(null);
-      showToast("success", `"${property.name}" was deleted.`);
+      showToast("success", `"${property.title}" was deleted.`);
     } catch (error) {
       console.error("Failed to delete property:", error);
       showToast(
@@ -477,14 +200,14 @@ export default function PropertyManagement() {
       <Toast toast={toast} onClose={() => setToast(null)} />
 
       <div className="max-w-7xl mx-auto">
-        {/* Page Header */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
               Property Management
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Manage listings, locations, room allocations, and property owners.
+              Manage listings, pricing, specs, tags, and ownership.
             </p>
           </div>
 
@@ -497,7 +220,7 @@ export default function PropertyManagement() {
           </button>
         </div>
 
-        {/* Metric Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           <StatCard
             label="Total Properties"
@@ -513,20 +236,20 @@ export default function PropertyManagement() {
             tint="bg-blue-50 text-blue-600"
           />
           <StatCard
-            label="Mapped Locations"
-            value={loading ? "—" : totalMapped}
+            label="Filtered Results"
+            value={loading ? "—" : filteredProperties.length}
             icon={MapPin}
             tint="bg-violet-50 text-violet-600"
           />
         </div>
 
-        {/* Filter and Search Bar */}
+        {/* Filter Bar */}
         <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search property or address..."
+              placeholder="Search title, address, or location..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 focus:bg-white transition"
@@ -554,17 +277,17 @@ export default function PropertyManagement() {
           </div>
         </div>
 
-        {/* Properties Table Card */}
+        {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4 w-20">ID</th>
+                  <th className="py-3 px-4 w-16">ID</th>
                   <th className="py-3 px-4">Property</th>
-
-                  <th className="py-3 px-4">Address</th>
-                  <th className="py-3 px-4">Coordinates</th>
+                  <th className="py-3 px-4">Price</th>
+                  <th className="py-3 px-4">Specs</th>
+                  <th className="py-3 px-4">Address / Location</th>
                   <th className="py-3 px-4 pr-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -573,27 +296,27 @@ export default function PropertyManagement() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
                       <td className="py-4 px-4">
-                        <div className="h-5 w-12 bg-slate-100 rounded-full" />
+                        <div className="h-5 w-10 bg-slate-100 rounded" />
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-slate-100" />
+                          <div className="w-12 h-12 bg-slate-100 rounded-xl" />
                           <div className="space-y-1.5">
-                            <div className="h-3.5 w-32 bg-slate-100 rounded" />
-                            <div className="h-3 w-44 bg-slate-100 rounded" />
+                            <div className="h-4 w-32 bg-slate-100 rounded" />
+                            <div className="h-3 w-20 bg-slate-100 rounded" />
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        <div className="h-3.5 w-24 bg-slate-100 rounded" />
+                        <div className="h-4 w-20 bg-slate-100 rounded" />
                       </td>
                       <td className="py-4 px-4">
-                        <div className="h-3.5 w-40 bg-slate-100 rounded" />
+                        <div className="h-4 w-28 bg-slate-100 rounded" />
                       </td>
                       <td className="py-4 px-4">
-                        <div className="h-6 w-28 bg-slate-100 rounded-md" />
+                        <div className="h-4 w-36 bg-slate-100 rounded" />
                       </td>
-                      <td className="py-4 px-4" />
+                      <td className="py-4 px-4 text-right" />
                     </tr>
                   ))
                 ) : filteredProperties.length > 0 ? (
@@ -602,58 +325,115 @@ export default function PropertyManagement() {
                       key={property.id}
                       className="hover:bg-slate-50/60 transition duration-150"
                     >
+                      {/* ID */}
                       <td className="py-4 px-4 font-medium text-slate-900">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
                           #{property.id}
                         </span>
                       </td>
 
-                      <td className="py-4 px-4 font-medium text-slate-900">
+                      {/* Property Image + Title/Name + Tag + Owner */}
+                      <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                            <Building2 className="w-5 h-5" />
-                          </div>
+                          {property.featured_image ? (
+                            <img
+                              src={property.featured_image}
+                              alt={property.title}
+                              className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+
                           <div className="min-w-0">
-                            <div className="font-semibold text-slate-900 truncate max-w-[14rem]">
-                              {property.name}
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-900 truncate max-w-[14rem]">
+                                {property.title}
+                              </span>
+                              {property.tag && (
+                                <span
+                                  className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${
+                                    property.tag_color ||
+                                    "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                  }`}
+                                >
+                                  {property.tag}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-slate-400 truncate max-w-xs">
-                              {property.description ||
-                                "No description provided"}
-                            </div>
+                            <p className="text-xs text-slate-400 truncate max-w-xs mt-0.5">
+                              Owner: {property.owner?.name || "Unassigned"}
+                            </p>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-4 px-4 max-w-xs text-slate-600">
-                        <div className="truncate" title={property.address}>
-                          {property.address}
+                      {/* Price / Price Display */}
+                      <td className="py-4 px-4">
+                        <div className="font-semibold text-slate-900">
+                          {property.price_display
+                            ? property.price_display
+                            : `$${Number(property.price).toLocaleString()}`}
                         </div>
-                      </td>
-
-                      <td className="py-4 px-4 font-mono text-xs text-slate-500">
-                        {Number.isFinite(Number(property.latitude)) &&
-                        Number.isFinite(Number(property.longitude)) ? (
-                          <a
-                            href={`https://maps.google.com/?q=${Number(property.latitude)},${Number(property.longitude)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition"
-                          >
-                            <MapPin className="w-3 h-3 text-red-500" />
-                            <span>
-                              {Number(property.latitude).toFixed(4)},{" "}
-                              {Number(property.longitude).toFixed(4)}
-                            </span>
-                            <ExternalLink className="w-3 h-3 text-slate-400" />
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 italic font-sans">
-                            Not set
-                          </span>
+                        {!property.price_display && property.price_suffix && (
+                          <div className="text-xs text-slate-400 font-normal">
+                            {property.price_suffix}
+                          </div>
                         )}
                       </td>
 
+                      {/* Beds / Baths / Sqft */}
+                      <td className="py-4 px-4 text-slate-600 text-xs">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="inline-flex items-center gap-1"
+                            title={`${property.beds} Bedrooms`}
+                          >
+                            <Bed className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="font-medium text-slate-700">
+                              {property.beds}
+                            </span>
+                            <span className="text-slate-400">bd</span>
+                          </span>
+                          <span
+                            className="inline-flex items-center gap-1"
+                            title={`${property.baths} Bathrooms`}
+                          >
+                            <Bath className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="font-medium text-slate-700">
+                              {property.baths}
+                            </span>
+                            <span className="text-slate-400">ba</span>
+                          </span>
+                          {property.sqft && (
+                            <span
+                              className="inline-flex items-center gap-1"
+                              title={`${property.sqft} sq ft`}
+                            >
+                              <Maximize2 className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="font-medium text-slate-700">
+                                {property.sqft}
+                              </span>
+                              <span className="text-slate-400">sqft</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Location / Address */}
+                      <td className="py-4 px-4 max-w-xs text-slate-600 text-xs">
+                        <div
+                          className="truncate flex items-center gap-1.5"
+                          title={property.address}
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{property.address}</span>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
                       <td className="py-4 px-4 pr-6 text-right relative">
                         <button
                           onClick={(e) => {
@@ -687,7 +467,7 @@ export default function PropertyManagement() {
                               <Eye className="w-3.5 h-3.5" /> View Details
                             </button>
                             <button
-                               onClick={() =>
+                              onClick={() =>
                                 navigate(
                                   `/admin/properties/edit/${property.id}`,
                                 )

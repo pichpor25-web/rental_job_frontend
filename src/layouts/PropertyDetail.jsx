@@ -192,11 +192,10 @@ export default function PropertyDetailsPage() {
     return [];
   }, [propertyData]);
 
-  // Navigate to Room Detail Page
-  const handleOpenRoomDetail = (room) => {
-    if (room?.id) {
-      navigate(`/rooms/${room.id}`);
-    }
+  // Open Room Modal
+  const handleOpenRoomModal = (room) => {
+    setActiveRoomModal(room);
+    setModalPhotoIdx(0);
   };
 
   // Direct to booking / payment route
@@ -430,14 +429,13 @@ export default function PropertyDetailsPage() {
               {roomsList.map((room) => (
                 <div
                   key={room.id}
-                  onClick={() => handleOpenRoomDetail(room)}
+                  onClick={() => handleOpenRoomModal(room)}
                   className="cursor-pointer transition-transform hover:-translate-y-1"
                 >
                   <RoomCard
                     room={room}
                     isSelected={false}
-                    onSelect={() => handleOpenRoomDetail(room)}
-                    onBookDirect={() => handleOpenRoomDetail(room)}
+                    onSelect={() => handleOpenRoomModal(room)}
                   />
                 </div>
               ))}
