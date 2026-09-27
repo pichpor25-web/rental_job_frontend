@@ -14,6 +14,7 @@ import {
   Maximize2,
   Tag,
   Image as ImageIcon,
+  Upload,
   CheckSquare,
   Plus,
   Trash2,
@@ -30,7 +31,10 @@ const FALLBACK_OWNERS = [
 
 const PRESET_TAG_COLORS = [
   { label: "Indigo", value: "bg-indigo-50 text-indigo-700 border-indigo-200" },
-  { label: "Emerald", value: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  {
+    label: "Emerald",
+    value: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
   { label: "Amber", value: "bg-amber-50 text-amber-700 border-amber-200" },
   { label: "Rose", value: "bg-rose-50 text-rose-700 border-rose-200" },
   { label: "Sky", value: "bg-sky-50 text-sky-700 border-sky-200" },
@@ -78,7 +82,10 @@ export default function EditPropertyPage() {
     description: "",
   });
 
-  const [newGalleryUrl, setNewGalleryUrl] = useState("");
+  const [featuredFile, setFeaturedFile] = useState(null);
+  const [featuredPreview, setFeaturedPreview] = useState("");
+  const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryPreviews, setGalleryPreviews] = useState([]);
   const [customAmenity, setCustomAmenity] = useState("");
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
@@ -148,14 +155,28 @@ export default function EditPropertyPage() {
               "bg-indigo-50 text-indigo-700 border-indigo-200",
             location: prop.location || propAddress,
             address: propAddress,
-            price: prop.price !== null && prop.price !== undefined ? String(prop.price) : "",
+            price:
+              prop.price !== null && prop.price !== undefined
+                ? String(prop.price)
+                : "",
             price_display: prop.price_display || "",
             price_suffix: prop.price_suffix || "/ mo",
-            beds: prop.beds !== null && prop.beds !== undefined ? String(prop.beds) : "",
-            baths: prop.baths !== null && prop.baths !== undefined ? String(prop.baths) : "",
-            sqft: prop.sqft !== null && prop.sqft !== undefined ? String(prop.sqft) : "",
+            beds:
+              prop.beds !== null && prop.beds !== undefined
+                ? String(prop.beds)
+                : "",
+            baths:
+              prop.baths !== null && prop.baths !== undefined
+                ? String(prop.baths)
+                : "",
+            sqft:
+              prop.sqft !== null && prop.sqft !== undefined
+                ? String(prop.sqft)
+                : "",
             featured_image: prop.featured_image || "",
-            gallery: parseArray(prop.gallery),
+            gallery: parseArray(prop.gallery)
+              .map((item) => (typeof item === "object" ? item.url : item))
+              .filter(Boolean),
             amenities: parseArray(prop.amenities),
             description: prop.description || "",
           });
@@ -166,7 +187,7 @@ export default function EditPropertyPage() {
           setFetchError(
             err?.response?.data?.message ||
               err.message ||
-              "Failed to load property details."
+              "Failed to load property details.",
           );
         }
       } finally {
@@ -204,21 +225,21 @@ export default function EditPropertyPage() {
   };
 
   // Gallery handlers
-  const handleAddGalleryImage = () => {
-    const trimmed = newGalleryUrl.trim();
-    if (!trimmed) return;
-    setFormData((prev) => ({
-      ...prev,
-      gallery: [...prev.gallery, trimmed],
-    }));
-    setNewGalleryUrl("");
-  };
-
   const handleRemoveGalleryImage = (index) => {
     setFormData((prev) => ({
       ...prev,
       gallery: prev.gallery.filter((_, i) => i !== index),
     }));
+  };
+
+  const handleGalleryFiles = (event) => {
+    const files = Array.from(event.target.files || []);
+    setGalleryFiles((previous) => [...previous, ...files]);
+    setGalleryPreviews((previous) => [
+      ...previous,
+      ...files.map((file) => URL.createObjectURL(file)),
+    ]);
+    event.target.value = "";
   };
 
   // Amenities handlers
@@ -248,10 +269,14 @@ export default function EditPropertyPage() {
 
   const validate = () => {
     const newErrors = {};
-    if (!String(formData.title).trim()) newErrors.title = "Property Title / Name is required";
-    if (!String(formData.address).trim()) newErrors.address = "Address / Location is required";
-    if (!formData.owner_id) newErrors.owner_id = "Please select a property owner";
-    if (formData.price && isNaN(Number(formData.price))) newErrors.price = "Price must be a valid number";
+    if (!String(formData.title).trim())
+      newErrors.title = "Property Title / Name is required";
+    if (!String(formData.address).trim())
+      newErrors.address = "Address / Location is required";
+    if (!formData.owner_id)
+      newErrors.owner_id = "Please select a property owner";
+    if (formData.price && isNaN(Number(formData.price)))
+      newErrors.price = "Price must be a valid number";
     return newErrors;
   };
 
@@ -266,7 +291,6 @@ export default function EditPropertyPage() {
     try {
       setSubmitting(true);
 
-      // Payload strictly matches Model $fillable & $casts
       const payload = {
         owner_id: Number(formData.owner_id),
         title: formData.title.trim(),
@@ -281,17 +305,35 @@ export default function EditPropertyPage() {
         beds: formData.beds !== "" ? parseInt(formData.beds, 10) : null,
         baths: formData.baths !== "" ? parseInt(formData.baths, 10) : null,
         sqft: formData.sqft !== "" ? parseInt(formData.sqft, 10) : null,
-        featured_image: formData.featured_image.trim() || null,
+        featured_image: formData.featured_image || null,
         gallery: formData.gallery,
         amenities: formData.amenities,
         description: formData.description.trim() || null,
       };
 
-      await updateProperty(id, payload);
+      if (featuredFile || galleryFiles.length > 0) {
+        const data = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+          if (["featured_image", "gallery"].includes(key)) return;
+          if (value !== null && value !== undefined) {
+            data.append(
+              key,
+              Array.isArray(value) ? JSON.stringify(value) : value,
+            );
+          }
+        });
+        if (featuredFile) data.append("featured_image", featuredFile);
+        galleryFiles.forEach((file) => data.append("gallery[]", file));
+        await updateProperty(id, data);
+      } else {
+        await updateProperty(id, payload);
+      }
       navigate(`/admin/properties/view/${id}`);
     } catch (error) {
       console.error("Failed to update property:", error);
-      alert(error?.response?.data?.message || "Failed to save property changes.");
+      alert(
+        error?.response?.data?.message || "Failed to save property changes.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -355,7 +397,8 @@ export default function EditPropertyPage() {
               Edit Property #{id}
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">
-              Update listing information, pricing, specifications, media, and features.
+              Update listing information, pricing, specifications, media, and
+              features.
             </p>
           </div>
         </div>
@@ -363,7 +406,6 @@ export default function EditPropertyPage() {
         {/* Form Container */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-100 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-8">
-            
             {/* 1. Basic Info & Owner */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
@@ -619,20 +661,27 @@ export default function EditPropertyPage() {
               {/* Featured Image */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
-                  Featured Image URL
+                  Featured Image
                 </label>
                 <div className="flex items-center gap-4">
-                  <input
-                    type="url"
-                    name="featured_image"
-                    value={formData.featured_image}
-                    onChange={handleInputChange}
-                    placeholder="https://example.com/main-photo.jpg"
-                    className={inputClass("featured_image")}
-                  />
-                  {formData.featured_image && (
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                    <Upload className="w-4 h-4 text-indigo-600" /> Upload image
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          setFeaturedFile(file);
+                          setFeaturedPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </label>
+                  {(featuredPreview || formData.featured_image) && (
                     <img
-                      src={formData.featured_image}
+                      src={featuredPreview || formData.featured_image}
                       alt="Featured Preview"
                       className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0"
                       onError={(e) => (e.currentTarget.style.display = "none")}
@@ -646,32 +695,21 @@ export default function EditPropertyPage() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                   Gallery Images
                 </label>
-                <div className="flex gap-2 mb-3">
+                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700">
+                  <Upload className="w-4 h-4 text-indigo-600" /> Upload gallery
+                  photos
                   <input
-                    type="url"
-                    value={newGalleryUrl}
-                    onChange={(e) => setNewGalleryUrl(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddGalleryImage();
-                      }
-                    }}
-                    placeholder="Paste image URL and click add..."
-                    className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={handleGalleryFiles}
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddGalleryImage}
-                    className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 font-semibold text-xs rounded-xl flex items-center gap-1.5 shrink-0 transition"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Image</span>
-                  </button>
-                </div>
+                </label>
 
                 {/* Preview Gallery Grid */}
-                {formData.gallery.length > 0 && (
+                {(formData.gallery.length > 0 ||
+                  galleryPreviews.length > 0) && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                     {formData.gallery.map((url, idx) => (
                       <div
@@ -682,15 +720,40 @@ export default function EditPropertyPage() {
                           src={url}
                           alt={`Gallery ${idx + 1}`}
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src =
-                              "https://via.placeholder.com/150?text=Invalid+URL";
-                          }}
+                          onError={(e) =>
+                            (e.currentTarget.style.display = "none")
+                          }
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveGalleryImage(idx)}
                           className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition shadow"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {galleryPreviews.map((preview, idx) => (
+                      <div
+                        key={`upload-${idx}`}
+                        className="relative group rounded-xl overflow-hidden border border-slate-200 bg-slate-100 h-24"
+                      >
+                        <img
+                          src={preview}
+                          alt={`Gallery upload ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setGalleryFiles((files) =>
+                              files.filter((_, i) => i !== idx),
+                            );
+                            setGalleryPreviews((items) =>
+                              items.filter((_, i) => i !== idx),
+                            );
+                          }}
+                          className="absolute top-1.5 right-1.5 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

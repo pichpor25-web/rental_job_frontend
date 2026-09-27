@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { fetchProperties, deleteProperty } from "../../Api/propertyApi";
+import { resolveImageUrl } from "../../utils/imageHelper";
 import { fetchUsers } from "../../Api/userApi";
 
 const normalizeProperty = (property) => ({
@@ -44,7 +45,7 @@ const normalizeProperty = (property) => ({
   tag: property.tag || null,
   tag_color:
     property.tag_color || "bg-indigo-50 text-indigo-700 border-indigo-200",
-  featured_image: property.featured_image || null,
+  featured_image: property.featured_image || property.gallery?.[0] || null,
 });
 
 function Toast({ toast, onClose }) {
@@ -335,17 +336,27 @@ export default function PropertyManagement() {
                       {/* Property Image + Title/Name + Tag + Owner */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          {property.featured_image ? (
-                            <img
-                              src={property.featured_image}
-                              alt={property.title}
-                              className="w-12 h-12 rounded-xl object-cover border border-slate-100 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center shrink-0">
+                          <div className="relative w-12 h-12 shrink-0">
+                            <div
+                              className={`${property.featured_image ? "hidden" : ""} absolute inset-0 rounded-xl bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center`}
+                              data-image-fallback
+                            >
                               <ImageIcon className="w-5 h-5" />
                             </div>
-                          )}
+                            {property.featured_image && (
+                              <img
+                                src={resolveImageUrl(property.featured_image)}
+                                alt={property.title}
+                                className="absolute inset-0 w-12 h-12 rounded-xl object-cover border border-slate-100"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                  event.currentTarget.parentElement
+                                    ?.querySelector("[data-image-fallback]")
+                                    ?.classList.remove("hidden");
+                                }}
+                              />
+                            )}
+                          </div>
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
