@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Homepage from "../layouts/Homepage";
 import Propertypage from "../layouts/Propertypage";
 import PropertyDetail from "../layouts/PropertyDetail";
-import RoomDetailPage from "../pages/tenant/RoomDetailPage";
+import RoomDetails from "../components/room/RoomDetails";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminRoute from "./AdminRoute";
 import Dashboard from "../pages/admin/Dashboard";
@@ -34,8 +34,8 @@ function Index() {
       <Route path="/property/:id" element={<PropertyDetail />} />
       <Route path="/propertydetail" element={<PropertyDetail />} />
       <Route path="/propertydetail/:id" element={<PropertyDetail />} />
-      <Route path="/rooms/:id" element={<RoomDetailPage />} />
-      <Route path="/room/:id" element={<RoomDetailPage />} />
+      <Route path="/rooms/:id" element={<RoomDetails />} />
+      <Route path="/room/:id" element={<RoomDetails />} />
       <Route path="/propertycard" element={<Propertypage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
