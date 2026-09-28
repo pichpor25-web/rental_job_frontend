@@ -5,6 +5,7 @@ import PropertyDetail from "../layouts/PropertyDetail";
 import RoomDetailPage from "../pages/tenant/RoomDetailPage";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminRoute from "./AdminRoute";
+import OwnerRoute from "./OwnerRoute";
 import Dashboard from "../pages/admin/Dashboard";
 import UsersManagement from "../pages/admin/Users";
 import Properties from "../pages/admin/Properties";
@@ -24,6 +25,9 @@ import ForgotPasswordPage from "../pages/auth/ForgotPassword";
 import VerifyOtpPage from "../pages/auth/VerifyOTP";
 import ResetPasswordPage from "../pages/auth/ResetPassword";
 import RentalManagement from "../pages/admin/Rentals";
+import ViewRentalPage from "../pages/admin/ViewRental";
+import MyRentals from "../pages/tenant/MyRentals";
+import TenantRentalRequests from "../pages/tenant/RentalRequests";
 
 function Index() {
   return (
@@ -36,6 +40,10 @@ function Index() {
       <Route path="/propertydetail/:id" element={<PropertyDetail />} />
       <Route path="/rooms/:id" element={<RoomDetailPage />} />
       <Route path="/room/:id" element={<RoomDetailPage />} />
+      <Route path="/owner/rental-requests" element={<OwnerRoute><RentalRequestManagement /></OwnerRoute>} />
+      <Route path="/owner/rental-requests/:id" element={<OwnerRoute><ViewRentalRequestPage /></OwnerRoute>} />
+      <Route path="/my-rentals" element={<MyRentals />} />
+      <Route path="/my-rental-requests" element={<TenantRentalRequests />} />
       <Route path="/propertycard" element={<Propertypage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
@@ -71,6 +79,7 @@ function Index() {
         <Route path="rentalrequest/:id" element={<ViewRentalRequestPage />} />
 
         <Route path="rental" element={<RentalManagement />} />
+        <Route path="rentals/view/:id" element={<ViewRentalPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -79,3 +88,4 @@ function Index() {
 }
 
 export default Index;
+

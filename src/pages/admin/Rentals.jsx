@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { resolveImageUrl } from "../../utils/imageHelper";
 import {
   KeyRound,
   Building2,
@@ -461,13 +462,17 @@ export default function RentalManagement() {
 
                       {/* Room & Property */}
                       <td className="py-4 px-4 font-medium text-slate-900">
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-900">
-                            Room {rental.room_number}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                            <Building2 className="h-5 w-5" />
+                            {rental.room_image_url && <img src={resolveImageUrl(rental.room_image_url)} alt={`Room ${rental.room_number}`} className="absolute inset-0 h-full w-full object-cover" onError={(event) => event.currentTarget.remove()} />}
                           </div>
-                          <div className="text-xs text-slate-400 truncate flex items-center gap-1">
-                            <Building2 className="w-3 h-3 shrink-0" />
-                            <span>{rental.property_name}</span>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900">Room {rental.room_number}</div>
+                            <div className="text-xs text-slate-400 truncate flex items-center gap-1">
+                              <Building2 className="w-3 h-3 shrink-0" />
+                              <span>{rental.property_name}</span>
+                            </div>
                           </div>
                         </div>
                       </td>

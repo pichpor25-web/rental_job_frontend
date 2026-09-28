@@ -8,3 +8,5 @@ export const fetchRentalRequestById = (id) =>
 
 export const updateRentalRequestStatus = (id, status) =>
   API.put(`/rental-requests/${id}/status`, { status });
+
+export const createRentalRequest = (data) => API.post("/rental-requests", data);

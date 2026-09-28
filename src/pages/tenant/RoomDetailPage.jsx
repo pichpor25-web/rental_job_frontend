@@ -25,14 +25,15 @@ import {
 } from "lucide-react";
 import Navbar from "../../components/common/Navbar";
 import Footer from "../../components/common/Footer";
-import KHQRPaymentModal from "../../components/payment/KHQRPaymentModal";
-import { bookRoomStay } from "../../Api/paymentApi";
+import { createRentalRequest } from "../../Api/rentalRequestApi";
 import { fetchRoom } from "../../Api/roomApi";
 import { resolveImageUrl } from "../../utils/imageHelper";
+import { useAuth } from "../../context/AuthContext";
 
 export default function RoomDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +42,6 @@ export default function RoomDetailPage() {
   const [checkInDate, setCheckInDate] = useState("2026-10-15");
   const [checkOutDate, setCheckOutDate] = useState("2026-10-18");
   const [guestCount, setGuestCount] = useState(2);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [bookingRentalId, setBookingRentalId] = useState(null);
   const [isBooking, setIsBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
@@ -86,7 +85,7 @@ export default function RoomDetailPage() {
             sleepingArrangements: [
               {
                 room: "Primary Sleeping Area",
-                details: `${raw.bed_type || "1 Queen Bed"} • Luxury linens`,
+                details: `${raw.bed_type || "1 Queen Bed"} - Luxury linens`,
                 icon: Bed,
               },
             ],
@@ -149,25 +148,25 @@ export default function RoomDetailPage() {
   const totalPrice = basePrice + serviceFee + cleaningFee;
 
   const handleStartReservation = async () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
     setBookingError("");
     try {
       setIsBooking(true);
-      // Create pending reservation on backend
-      const res = await bookRoomStay({
+      const res = await createRentalRequest({
         room_id: room.numericId || 1,
         start_date: checkInDate,
         end_date: checkOutDate,
         total_guests: guestCount,
       });
-
-      const rentalId = res.data?.data?.id;
-      if (!rentalId) {
-        throw new Error("The reservation was not created. Please try again.");
+      if (!res.data?.data?.id) {
+        throw new Error("Your request was not submitted. Please try again.");
       }
-      setBookingRentalId(rentalId);
-      setShowPaymentModal(true);
+      setBookingConfirmed(true);
     } catch (err) {
-      console.error("Unable to create reservation:", err);
+      console.error("Unable to submit rental request:", err);
       const validationErrors = err.response?.data?.errors;
       const firstValidationError = validationErrors
         ? Object.values(validationErrors).flat()[0]
@@ -176,7 +175,7 @@ export default function RoomDetailPage() {
         firstValidationError ||
           err.response?.data?.message ||
           err.message ||
-          "Unable to create your reservation. Please try again.",
+          "Unable to submit your rental request. Please try again.",
       );
     } finally {
       setIsBooking(false);
@@ -260,7 +259,7 @@ export default function RoomDetailPage() {
                 <span className="font-semibold text-slate-700">
                   {room.propertyTitle}
                 </span>{" "}
-                • {room.propertyLocation}
+                - {room.propertyLocation}
               </p>
             </div>
           </div>
@@ -512,7 +511,7 @@ export default function RoomDetailPage() {
               <div className="space-y-2.5 pt-2 text-xs text-stone-600 border-t border-stone-100">
                 <div className="flex justify-between">
                   <span>
-                    ${Number(room.pricePerNight).toFixed(2)} × {nightsCount}{" "}
+                    ${Number(room.pricePerNight).toFixed(2)} x {nightsCount}{" "}
                     {nightsCount === 1 ? "night" : "nights"}:
                   </span>
                   <span className="font-semibold text-slate-900">
@@ -562,14 +561,14 @@ export default function RoomDetailPage() {
                 disabled={isBooking}
                 className="w-full py-4 rounded-full bg-[#E5B869] hover:bg-[#d6a550] active:scale-98 text-[#06241e] font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
               >
-                <span>Pay & Reserve with Bakong KHQR</span>
+                <span>Request to Rent</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
 
               <div className="text-center space-y-1">
                 <p className="text-[10px] text-stone-400 flex items-center justify-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Instant NBC Bakong Settlement & Confirmation</span>
+                  <span>The owner or admin will review your request before payment.</span>
                 </p>
               </div>
             </div>
@@ -577,29 +576,7 @@ export default function RoomDetailPage() {
         </div>
       </main>
 
-      {/* BAKONG KHQR PAYMENT MODAL */}
-      <KHQRPaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        rentalId={bookingRentalId}
-        amount={totalPrice}
-        calculation={{
-          nights: nightsCount,
-          nightly_rate: room.pricePerNight,
-          base_price: basePrice,
-          service_fee: serviceFee,
-          cleaning_fee: cleaningFee,
-          total_amount: totalPrice,
-        }}
-        propertyName={room.propertyTitle}
-        roomName={room.name}
-        onPaymentSuccess={(confirmed) => {
-          setShowPaymentModal(false);
-          setBookingConfirmed(true);
-        }}
-      />
-
-      {/* CONFIRMATION SUCCESS DIALOG */}
+      {/* REQUEST SUBMITTED DIALOG */}
       {bookingConfirmed && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 text-center space-y-5 shadow-2xl border border-stone-200">
@@ -609,25 +586,24 @@ export default function RoomDetailPage() {
 
             <div>
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#E5B869]">
-                Booking Confirmed
+                Request Submitted
               </span>
               <h3 className="text-2xl font-serif font-bold text-slate-900 mt-1">
-                Your Luxury Stay is Secured
+                Your request is waiting for approval
               </h3>
               <p className="text-xs text-stone-500 mt-2 leading-relaxed">
-                Thank you! Your reservation for{" "}
+                Your request to rent{" "}
                 <strong className="text-slate-800">{room.name}</strong> from{" "}
                 <strong>{checkInDate}</strong> to{" "}
-                <strong>{checkOutDate}</strong> has been confirmed via Bakong
-                KHQR.
+                <strong>{checkOutDate}</strong> has been sent. You can pay after it is approved.
               </p>
             </div>
 
             <button
-              onClick={() => setBookingConfirmed(false)}
+              onClick={() => { setBookingConfirmed(false); navigate("/my-rental-requests"); }}
               className="w-full py-3.5 rounded-full bg-[#06241e] text-[#E5B869] font-bold text-xs tracking-wider transition hover:bg-[#0d3b32]"
             >
-              Done
+              View Request Status
             </button>
           </div>
         </div>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { resolveImageUrl } from "../../utils/imageHelper";
 import {
   FileText,
   Building2,
@@ -92,6 +94,7 @@ function Toast({ toast, onClose }) {
 
 export default function ViewRentalRequestPage() {
   const { id } = useParams();
+  const { user } = useAuth();
 
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -226,7 +229,7 @@ export default function ViewRentalRequestPage() {
           </h2>
           <p className="text-sm text-slate-500 mb-6">{error}</p>
           <Link
-            to="/admin/rentalrequest"
+            to={user?.role?.toLowerCase() === "owner" ? "/owner/rental-requests" : "/admin/rentalrequest"}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium text-xs rounded-xl hover:bg-indigo-700 transition"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -245,7 +248,7 @@ export default function ViewRentalRequestPage() {
         {/* Navigation & Header Actions */}
         <div className="flex items-center justify-between gap-4">
           <Link
-            to="/admin/rentalrequest"
+            to={user?.role?.toLowerCase() === "owner" ? "/owner/rental-requests" : "/admin/rentalrequest"}
             className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 transition"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -338,6 +341,18 @@ export default function ViewRentalRequestPage() {
                   Target Room & Property
                 </span>
               </div>
+
+              {request.room_image_url ? (
+                <img
+                  src={resolveImageUrl(request.room_image_url)}
+                  alt={request.room_name || `Room ${request.room_number || request.room_id}`}
+                  className="w-full h-64 object-cover rounded-2xl mb-4"
+                />
+              ) : (
+                <div className="w-full h-48 rounded-2xl mb-4 bg-slate-100 flex items-center justify-center text-slate-400">
+                  <BedSingle className="w-12 h-12" />
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3">

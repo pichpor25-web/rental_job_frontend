@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { resolveImageUrl } from "../../utils/imageHelper";
 import {
   FileText,
   Search,
@@ -117,6 +119,7 @@ function StatusBadge({ status }) {
 
 export default function RentalRequestManagement() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [requests, setRequests] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -292,19 +295,19 @@ export default function RentalRequestManagement() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
           <StatCard
             label="Total Applications"
-            value={loading ? "—" : totalRequests}
+            value={loading ? "â€”" : totalRequests}
             icon={FileText}
             tint="bg-indigo-50 text-indigo-600"
           />
           <StatCard
             label="Pending Review"
-            value={loading ? "—" : pendingRequests}
+            value={loading ? "â€”" : pendingRequests}
             icon={Clock}
             tint="bg-amber-50 text-amber-600"
           />
           <StatCard
             label="Approved"
-            value={loading ? "—" : approvedRequests}
+            value={loading ? "â€”" : approvedRequests}
             icon={CheckCircle}
             tint="bg-emerald-50 text-emerald-600"
           />
@@ -413,17 +416,14 @@ export default function RentalRequestManagement() {
 
                       {/* Room and Property */}
                       <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                            <BedSingle className="w-4 h-4" />
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded-lg border border-indigo-100 bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                            <BedSingle className="w-5 h-5" />
+                            {req.room_image_url && <img src={resolveImageUrl(req.room_image_url)} alt={`Room ${req.room_number || req.room_id}`} className="absolute inset-0 h-full w-full object-cover" onError={(event) => event.currentTarget.remove()} />}
                           </div>
-                          <div>
-                            <div className="font-bold text-slate-900">
-                              Room {req.room_number || req.room_id}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                              {req.property_name || "Property Unit"}
-                            </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-slate-900">Room {req.room_number || req.room_id}</div>
+                            <div className="text-xs text-slate-400">{req.property_name || "Property Unit"}</div>
                           </div>
                         </div>
                       </td>
@@ -469,7 +469,7 @@ export default function RentalRequestManagement() {
                           >
                             <button
                               onClick={() =>
-                                navigate(`/admin/rentalrequest/${req.id}`)
+                                navigate(user?.role?.toLowerCase() === "owner" ? `/owner/rental-requests/${req.id}` : `/admin/rentalrequest/${req.id}`)
                               }
                               className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 w-full"
                             >

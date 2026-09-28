@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Heart,
@@ -17,15 +17,18 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { getAvatarUrl } from "../../utils/auth";
 import ProfileModal from "./ProfileModal";
+const MyRentals = lazy(() => import("../../pages/tenant/MyRentals"));
+const RentalRequests = lazy(() => import("../../pages/tenant/RentalRequests"));
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, isTenant, logout } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeLink, setActiveLink] = useState("Home");
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [rentalModal, setRentalModal] = useState(null);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -122,6 +125,16 @@ const Navbar = () => {
 
               {isAuthenticated ? (
                 <div className="flex items-center gap-3">
+                  {user?.role?.toLowerCase() === "owner" && (
+                    <button type="button" onClick={() => navigate("/owner/rental-requests")} className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10">Review Requests</button>
+                  )}
+                  {isTenant && (
+                    <>
+                      <button type="button" onClick={() => setRentalModal("rentals")} className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10">My Rentals</button>
+                      <button type="button" onClick={() => setRentalModal("requests")} className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white hover:bg-white/10">My Requests</button>
+                    </>
+                  )}
+
                   {isAdmin && (
                     <button
                       type="button"
@@ -319,6 +332,16 @@ const Navbar = () => {
             ))}
 
             <div className="flex flex-col space-y-3 border-t border-white/10 pt-4">
+              {user?.role?.toLowerCase() === "owner" && (
+                <button type="button" onClick={() => { setMobileMenuOpen(false); navigate("/owner/rental-requests"); }} className="w-full rounded-full border border-white/15 bg-white/5 px-3 py-3 text-sm font-medium text-white hover:bg-white/10">Review Rental Requests</button>
+              )}
+              {isAuthenticated && isTenant && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => { setMobileMenuOpen(false); setRentalModal("rentals"); }} className="rounded-full border border-white/15 bg-white/5 px-3 py-3 text-sm font-medium text-white hover:bg-white/10">My Rentals</button>
+                  <button type="button" onClick={() => { setMobileMenuOpen(false); setRentalModal("requests"); }} className="rounded-full border border-white/15 bg-white/5 px-3 py-3 text-sm font-medium text-white hover:bg-white/10">My Requests</button>
+                </div>
+              )}
+
               {isAuthenticated ? (
                 <>
                   {isAdmin && (
@@ -411,8 +434,13 @@ const Navbar = () => {
         isOpen={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
       />
+      <Suspense fallback={null}>
+        {rentalModal === "rentals" && <MyRentals modalMode onClose={() => setRentalModal(null)} />}
+        {rentalModal === "requests" && <RentalRequests modalMode onClose={() => setRentalModal(null)} />}
+      </Suspense>
     </>
   );
 };
 
 export default Navbar;
+
